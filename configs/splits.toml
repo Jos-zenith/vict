@@ -1,0 +1,28 @@
+# Inter-patient record split (de Chazal et al. 2004), fixed 29 Sep 2026.
+# Any change here after the freeze tag invalidates the DS2 run.
+
+[ds1]
+train = [101, 106, 108, 109, 112, 115, 116, 118, 119, 122, 201, 203, 205, 208, 223, 230]
+cal   = [114, 124, 207, 209, 215, 220]
+
+[ds2]
+# 202 excluded: same subject as 201 (DS1). Used only in the sensitivity check.
+test = [100, 103, 105, 111, 113, 117, 121, 123, 200, 210, 212, 213, 214, 219, 221, 222,
+        228, 231, 232, 233, 234]
+sensitivity_extra = [202]
+
+[excluded]
+paced = [102, 104, 107, 217]
+
+# Expected V-beat counts (wfdb reference annotations, AAMI V = {V, E}).
+[expected_v_beats]
+ds1_train = 3323
+ds1_cal   = 465
+ds2_test  = 3202
+
+[noise]
+# NSTDB noise records. First half of each = development, second half = test.
+types = ["em", "ma", "bw"]
+block_s = 120
+train_blocks = [1, 2, 3, 4]
+cal_blocks   = [5, 6, 7]

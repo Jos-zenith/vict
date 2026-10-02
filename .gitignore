@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Data and outputs (re-downloadable / regenerated)
+data/
+results/
+!data/.gitkeep
+!results/.gitkeep
+
+# Papers (copyrighted; keep locally only)
+docs/papers/*.pdf
+
+# C / firmware build output
+c/build/
+firmware/build/
+firmware/sdkconfig
+firmware/sdkconfig.old
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

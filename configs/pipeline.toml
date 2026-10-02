@@ -1,0 +1,54 @@
+# Pipeline parameters. All values are fixed on DS1 and committed before the freeze.
+
+fs = 360                # Hz, native MIT-BIH; the board samples at the same rate
+window_s = 10           # non-overlapping decision windows
+lead = "MLII"           # selected by signal name (record 114 stores it second)
+
+[filter]                # classifier filter
+order = 4
+band_hz = [0.5, 40.0]
+dtype = "float32"
+skip_first_window = true
+
+[pan_tompkins]          # redesigned for 360 Hz
+band_hz = [5.0, 15.0]
+mwi_ms = 150
+refractory_ms = 200
+
+[mexican_hat]           # used only for qSQI
+sigma_ms = 25
+threshold_frac = 0.40
+running_max_s = 2.0
+
+[features]
+rr_history = 10
+r_search_ms = 50        # R amplitude: max within +/- this
+s_search_ms = 80        # S amplitude: min within this after R
+wavelet = "db4"
+wavelet_span_ms = [-250, 450]
+
+[windowing]
+min_beats = 3
+decision_timeout_s = 2.0
+censored_rr_s = 2.0
+rr_reset_after_intervals = 3
+
+[scoring]
+match_tolerance_ms = 150
+
+[noise_schedule]
+snr_db = [18, 12, 6, 0]
+clean_lead_min = 5
+segment_min = 2
+ramp_s = 1
+cycle_offsets = [0, 1, 2]
+signal_power_qrs = 300  # first N normal QRS complexes, trimmed mean p-p
+
+[thresholds]
+retention_targets = [0.9, 0.8, 0.95]  # x Robust's default retention; first = primary
+
+[evaluation]
+bootstrap_resamples = 10000
+min_meaningful_effect = 0.20
+min_effective_coverage = 0.80
+seed = 20260929
