@@ -31,3 +31,19 @@ the development laptop); CI builds them with CMake.
    within 0.35 % of NSTDB's), with the deviation recorded in the report.
 
 Full protocol: `scripts/run_ds2.py` docstring and `docs/report_section3_additions.md`.
+
+## Deviations from the Phase 0 checklist (recorded after the DS2 run)
+
+DS2 ran on 2026-10-07 from `freeze-v1` before these checklist items were complete.
+None of them could change the verdict, which follows from rules frozen in the tag;
+the post-freeze additions below are labelled as such.
+
+| Checklist item | Status at the freeze | After the freeze |
+|---|---|---|
+| Commit three noise schedules per record | Generated deterministically by the frozen code from committed configs; not written to a file | `configs/noise_schedules.json` (`scripts/export_schedules.py`): 44 records x 3 offsets with per-noise gains; all 396 processed noisy copies match it |
+| Tag paired differences by cause and place | Pairs used for the risk labels; cause split done by hand for record 114 only | `docs/paired_differences.md` (`scripts/analyze_differences.py`), post-hoc, DS1-cal and DS2 |
+| C core matches Python on synthetic vectors | Real MIT-BIH 119 vectors and a pass-through test only | Impulse, step, 10 Hz and 0.2 Hz sines and white noise added; all six sets bit-identical |
+| Pilot's predicted DS2 CI width | **Not done.** A width computed now would be written after seeing DS2, so it is not reported as a prediction | none |
+| Freeze operating paths for 0.9 / 0.8 / 0.95 | Rules frozen for all three targets; no numeric paths (decision 1: matched on DS2) | none |
+| 118e12 within 1 % RMS | 0.96 % at NSTDB's gain, 1.45 % at our gain (decision 4) | none |
+| Reproducible frozen repo | Tag and commits only on the development laptop; `ziglang` (used to build the C tests) missing from `requirements-freeze.txt`; DS2 models in `results/` (not in git) | `ziglang` added to `requirements-freeze.txt` on main (the tag's copy lacks it) |

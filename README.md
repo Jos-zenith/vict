@@ -87,3 +87,12 @@ ctest --test-dir c/build
 
 `python scripts/export_c_vectors.py` regenerates the Python reference vectors the C
 tests compare against.
+
+## After the freeze
+
+- `docs/ds2_verdict_freeze-v1.md`: the DS2 verdict and its limits; `docs/freeze_v1.md`:
+  checks, decisions and deviations.
+- `python scripts/export_schedules.py` writes `configs/noise_schedules.json` (three
+  schedules per record) and checks it against the processed copies.
+- `python scripts/analyze_differences.py` tags noisy-vs-clean differences by cause and
+  place (`docs/paired_differences.md`).

@@ -79,3 +79,9 @@ of windows in each noise type. Limits that belong next to that number:
 Reproduce: `git checkout freeze-v1 && python scripts/run_ds2.py` (the script refuses
 a second run into the same results folder; move `results/ds2/freeze-v1/` aside
 first). Models and window table: `results/ds2/freeze-v1/` (not in git).
+
+## Deviations
+
+Five Phase 0 checklist items were incomplete when DS2 ran; see "Deviations from the
+Phase 0 checklist" in `docs/freeze_v1.md`. In particular, no DS2 confidence-interval
+width was predicted from the pilot before the run.
