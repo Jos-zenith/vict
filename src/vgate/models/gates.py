@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import numpy as np
 from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 
 def confidence_features(decision_values: np.ndarray) -> np.ndarray:
@@ -19,5 +21,6 @@ def confidence_features(decision_values: np.ndarray) -> np.ndarray:
     return np.array([a.min(), a.mean(), np.percentile(a, 10), float(a.size)])
 
 
-def make_gate() -> LogisticRegression:
-    return LogisticRegression(max_iter=1000)
+def make_gate() -> Pipeline:
+    """Standardised logistic regression (margins, counts and log SQIs differ in scale)."""
+    return make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000))

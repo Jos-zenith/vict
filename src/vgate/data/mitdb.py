@@ -55,6 +55,7 @@ class Record:
     ann_sample: np.ndarray   # reference beat sample indices
     ann_symbol: np.ndarray   # MIT-BIH symbols
     ann_aami: np.ndarray     # AAMI class per beat ("N", "S", "V", "F", "Q")
+    vf_episodes: np.ndarray  # (k, 2) start/stop samples of ventricular flutter/fibrillation
 
 
 def load_record(record: int, *, allow_test: bool = False, db_dir: Path = MITDB_DIR) -> Record:
@@ -71,6 +72,11 @@ def load_record(record: int, *, allow_test: bool = False, db_dir: Path = MITDB_D
     symbols = np.asarray(ann.symbol)
     classes = np.array([aami_class(s) for s in symbols], dtype=object)
     is_beat = classes != None  # noqa: E711 (elementwise on object array)
+    # "[" / "]" mark VF/VFL onset and end; such episodes have no beats to score (EC57)
+    onsets = np.asarray(ann.sample)[symbols == "["]
+    ends = np.asarray(ann.sample)[symbols == "]"]
+    vf = np.array([(s, ends[ends > s].min() if (ends > s).any() else len(sig)) for s in onsets],
+                  dtype=int).reshape(-1, 2)
     return Record(
         name=record,
         signal=sig,
@@ -78,4 +84,5 @@ def load_record(record: int, *, allow_test: bool = False, db_dir: Path = MITDB_D
         ann_sample=np.asarray(ann.sample)[is_beat],
         ann_symbol=symbols[is_beat],
         ann_aami=classes[is_beat].astype(str),
+        vf_episodes=vf,
     )
