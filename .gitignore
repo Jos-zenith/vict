@@ -7,10 +7,12 @@ __pycache__/
 .ruff_cache/
 
 # Data and outputs (re-downloadable / regenerated)
-data/
-results/
-!data/.gitkeep
-!results/.gitkeep
+# Leading slash = repo root only (plain data/ also matched src/vgate/data/).
+# /dir/* rather than /dir/ so the .gitkeep re-includes actually apply.
+/data/*
+/results/*
+!/data/.gitkeep
+!/results/.gitkeep
 
 # Papers (copyrighted; keep locally only)
 docs/papers/*.pdf
