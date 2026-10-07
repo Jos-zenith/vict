@@ -45,6 +45,8 @@ cycle_offsets = [0, 1, 2]
 signal_power_qrs = 300  # first N normal QRS complexes, trimmed mean p-p
 
 [thresholds]
+default = 0.0                 # beat called V when SVM decision value > this (sklearn convention)
+sweep = [-1.0, 3.0, 0.05]     # start, stop (inclusive), step; per-window counts are kept at each
 retention_targets = [0.9, 0.8, 0.95]  # x Robust's default retention; first = primary
 
 [evaluation]

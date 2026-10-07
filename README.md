@@ -29,12 +29,22 @@ macOS / Linux: `source .venv/bin/activate` instead of the Activate line.
 | `src/vgate/sqi.py` | qSQI, pSQI, kSQI, basSQI | Shapari |
 | `src/vgate/features.py` | Per-beat features | Chandru |
 | `src/vgate/models/` | Base/Robust SVM, Gc/Gcs gates | Chandru |
+| `src/vgate/windows.py` | Per-window table: the contract between classifier and evaluation | all |
 | `src/vgate/evaluation/` | Beat matching, bootstrap CIs | Chandru |
 | `c/` | Portable C core (post-freeze port), CMake + tests | Zenith |
 | `firmware/` | ESP32-S3 project (Should tier) | Zenith |
 | `docs/papers/` | Supplied PDFs (git-ignored) | — |
 
 Stubs raise `NotImplementedError` and carry their spec in the docstring.
+
+## The window table
+
+Everything after the classifier (gate training, risky labels, threshold sweeps,
+matched retention, bootstrap, coverage) reads one table with a row per 10 s window
+per record copy: `vgate.windows.WindowTable`. Build rows with
+`windows.from_record(...)`; the scoring rules and column meanings are in the
+`vgate/windows.py` docstring, and `WindowTable.validate()` enforces them on every
+build, save and load. Change the schema there, in one place, and tell the team.
 
 ## Rules that the code enforces
 
