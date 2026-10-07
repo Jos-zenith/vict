@@ -131,7 +131,13 @@ def training_data(data: dict[str, np.ndarray]) -> tuple[np.ndarray, np.ndarray]:
     return data["features"][keep], (data["label"][keep] == "V").astype(int)
 
 
-def to_windows(c: Copy, data: dict[str, np.ndarray], decision: np.ndarray) -> windows.WindowTable:
+def to_windows(
+    c: Copy,
+    data: dict[str, np.ndarray],
+    decision: np.ndarray,
+    clean: windows.WindowTable | None = None,
+) -> windows.WindowTable:
+    """Window rows for one copy; ``clean``: the record's clean-copy rows (same model)."""
     return windows.from_record(
         record=c.record,
         split=c.split,
@@ -145,4 +151,5 @@ def to_windows(c: Copy, data: dict[str, np.ndarray], decision: np.ndarray) -> wi
         decision=decision,
         ref_sample=data["ref_sample"],
         ref_aami=data["ref_aami"],
+        clean=clean,
     )

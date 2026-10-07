@@ -21,7 +21,12 @@ Scoring (detections matched to reference beats with evaluation.matching at
             (calls on reference Q beats are neither true nor false)
   lost_v    reference V beats in the window that the detector missed or whose
             matched detection is not called V
-  risky     false_v > 0 at the default threshold (the gates' training label)
+  risky     error-risk label (the gates' target): at the default threshold, noise
+            added a false V or lost a true V relative to the same window of the
+            paired clean copy (same record, same classifier):
+              false_v > clean false_v  or  lost_v > clean lost_v
+            Always False on the clean copy. Errors the classifier also makes on clean
+            signal (e.g. bundle-branch beats called V) are therefore not risk.
 
 Stored as .npz under results/ with WindowTable.save / WindowTable.load.
 """
@@ -145,7 +150,7 @@ class WindowTable:
     n_pred_v: np.ndarray         # (N, K) one column per threshold
     false_v: np.ndarray          # (N, K)
     lost_v: np.ndarray           # (N, K)
-    risky: np.ndarray            # false_v > 0 at the default threshold
+    risky: np.ndarray            # noise added a false V or lost a true V vs the clean copy
     thresholds: np.ndarray       # (K,) shared by every row
 
     def __len__(self) -> int:
@@ -207,8 +212,16 @@ class WindowTable:
         check(bool(np.all(self.false_v <= self.n_pred_v)), "false_v > n_pred_v")
         check(bool(np.all(self.n_pred_v <= self.n_beats[:, None])), "n_pred_v > n_beats")
         check(bool(np.all(self.lost_v <= self.n_true_v[:, None])), "lost_v > n_true_v")
-        check(bool(np.all(self.risky == (self.false_v[:, self.default_index] > 0))),
-              "risky != false_v > 0 at the default threshold")  # fmt: skip
+        check(not self.risky[clean].any(), "clean-copy windows cannot be risky")
+        d = self.default_index
+        pairs = zip(self.record[clean], self.t0[clean], strict=True)
+        ckey = {(r, t): i for i, (r, t) in enumerate(pairs)}
+        cfv, clost = self.false_v[clean, d], self.lost_v[clean, d]
+        for i in np.flatnonzero(~clean):
+            j = ckey.get((self.record[i], self.t0[i]))
+            if j is not None:  # clean pair present: the label must follow from it
+                want = self.false_v[i, d] > cfv[j] or self.lost_v[i, d] > clost[j]
+                check(bool(self.risky[i]) == bool(want), "risky disagrees with the clean pair")
 
     def save(self, path: str | Path) -> None:
         self.validate()
@@ -222,6 +235,28 @@ class WindowTable:
             table = cls(**{f.name: z[f.name] for f in fields(cls)})
         table.validate()
         return table
+
+
+def risky_vs_clean(
+    copy: str,
+    t0: np.ndarray,
+    false: np.ndarray,
+    lost: np.ndarray,
+    thr: np.ndarray,
+    clean: WindowTable | None,
+) -> np.ndarray:
+    """Error-risk label per window (see module docstring)."""
+    if copy == "clean":
+        return np.zeros(len(t0), bool)
+    if clean is None:
+        raise ValueError("a noisy copy needs its clean copy to label risky windows")
+    d = default_index(thr)
+    pos = {t: i for i, t in enumerate(clean.t0)}
+    missing = [t for t in t0 if t not in pos]
+    if missing:
+        raise ValueError(f"clean copy lacks windows at t0 = {missing[:5]}")
+    j = np.array([pos[t] for t in t0], dtype=int)
+    return (false[:, d] > clean.false_v[j, d]) | (lost[:, d] > clean.lost_v[j, d])
 
 
 def from_record(
@@ -239,8 +274,12 @@ def from_record(
     ref_sample: np.ndarray,
     ref_aami: np.ndarray,
     fs: int = 360,
+    clean: WindowTable | None = None,
 ) -> WindowTable:
     """Rows for one record copy.
+
+    clean: rows of the same record's clean copy scored with the same classifier;
+    required for a noisy copy, to label risky windows.
 
     starts: window_starts(); snr_db: (W,) per window; sqis: (W, 4) from sqi.window_sqis;
     det, decision: Pan-Tompkins R peaks and the classifier's decision value for each.
@@ -280,7 +319,7 @@ def from_record(
         n_pred_v=n_pred,
         false_v=false,
         lost_v=lost,
-        risky=false[:, default_index(thr)] > 0,
+        risky=risky_vs_clean(copy, starts // fs, false, lost, thr, clean),
         thresholds=thr,
     )
     table.validate()
