@@ -18,7 +18,18 @@ Each item is a decision the code makes that the report does not state yet.
 - **Primary analysis.** Operating points chosen on the held-out noise itself
   (retention exactly matched), leave-one-noise-type-out over em / ma / bw. Points
   chosen on the other two noise types and transferred are reported as secondary.
-  Coverage is checked per fold, not on the average across folds.
+  Coverage is checked per fold, not on the average across folds. In this oracle
+  setting the gated arms tune two settings on the held-out data (SVM threshold and
+  gate cut-off) and the raised-threshold arm one, which slightly favours the gates;
+  `Gcs@default` tunes only the cut-off.
+- **Clean-error records.** Every result is given for all records and without the
+  records whose clean copy already has more than 60 false V/h under Robust at the
+  default threshold (`[evaluation] clean_error_fv_h`; record 207 in DS1-cal). Their
+  false V calls are classifier errors on clean signal, which a noise gate neither
+  can nor should remove, and they otherwise dominate pooled totals.
+- **Coverage curve.** Gated arms are reported at deferral caps of 5, 10, 15 and 20 %
+  of windows (`[evaluation] coverage_curve`), since every gate uses the whole
+  allowance it is given.
 - **Ventricular flutter/fibrillation.** Windows overlapping a VF/VFL episode
   (MIT-BIH `[` … `]`, only record 207 in DS1) are left out of scoring, as in
   ANSI/AAMI EC57: they contain no beats to score.
@@ -38,3 +49,30 @@ Each item is a decision the code makes that the report does not state yet.
 - **118e12 acceptance (open).** With NSTDB's own gain our mixing reproduces
   118e12 at 0.96 % RMS difference; with the gain we compute it is 1.45 %, because
   our gain is 0.35 % below NSTDB's. The team has to decide whether this passes.
+
+# Pilot results worth reporting (DS1-cal, retention 0.9 x Robust default)
+
+`python scripts/run_pilot.py`; full output in `results/pilot/summary.json`,
+figure in `results/pilot/coverage_curve.png`.
+
+- **Record 207 decides the pooled number.** Gcs vs raised threshold (oracle, 20 %
+  deferral cap): +40 % [11, 90] over all six records, +87 % [80, 93] without 207
+  (per fold em/ma/bw +86/+80/+93 %); on 207 alone −2 %. 207 holds 52 % of the
+  threshold arm's false V calls, almost all bundle-branch beats called V on clean
+  signal (2706 false V/h on its clean copy). Expect the same on DS2: report the
+  effect with and without clean-error records.
+- **Gates use (nearly) the full deferral allowance.** Gcs sits at the cap at every
+  coverage level and Gc within 2 points of it (`@default` variants stop earlier,
+  where the retention target binds), so "gate vs threshold" is largely "defer x % vs defer
+  nothing". The like-for-like evidence that the SQIs help is **Gcs vs Gc at the same
+  cap**: +8 / +12 / +13 / +17 % at 5 / 10 / 15 / 20 % deferral (all records), all
+  three folds positive at every cap; +34 % [16, 53] at 20 % without 207.
+- **Gate settings do not transfer to a new noise type** (secondary, cut-offs set
+  on the other two noise types): Gcs keeps 75 % (ma) and 76 % (bw) of windows,
+  failing the coverage rule in two of three folds, and misses its retention target
+  in bw (0.582 vs 0.619). Gcs vs Gc falls to −8.5 % (−65 % on em, where Gcs deferred
+  7 % of windows and Gc 20 %). The SQI advantage seen with matched settings does not
+  survive this deployment-like case; DS2 cut-offs must be fixed before the run, so
+  this is the realistic expectation.
+- **Where the false V calls come from** (Base, record 114): clean copy 8 false V/h;
+  em copy 565 = 245 from spurious detections + 320 from real non-V beats called V.
