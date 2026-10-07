@@ -50,6 +50,34 @@ Each item is a decision the code makes that the report does not state yet.
   118e12 at 0.96 % RMS difference; with the gain we compute it is 1.45 %, because
   our gain is 0.35 % below NSTDB's. The team has to decide whether this passes.
 
+# DS2 protocol (fixed before the freeze; `scripts/run_ds2.py`)
+
+- **Models** are trained on DS1 only: Base on clean DS1-train; Robust on DS1-train
+  clean and noisy copies (all three noise types, train blocks 1-4) with Base's C;
+  Gc and Gcs on the noisy DS1-cal copies (cal blocks 5-7) with Robust's
+  clean-paired risk labels.
+- **Evaluation set**: the 21 DS2 records (202 only in a sensitivity check), each
+  clean and mixed with em, ma and bw at cycle offsets 0-2 using the noise test
+  blocks 9-15 (wholly in the second half of each noise record). Arms are scored on
+  the noisy copies.
+- **Operating points** use one rule per arm for the whole set, and neither rule
+  looks at false V calls: target = 0.9 x Robust's default V retention on the set;
+  the raised-threshold arm takes the highest SVM threshold with retention >= target;
+  the gated arms keep the SVM at its default threshold and defer the riskiest
+  windows while retention >= target, never deferring more than 20 % of the windows
+  of any noise type (one cut-off for all windows).
+- **Claim rule** (all DS2 records): r = relative reduction in false V/h of Gcs vs
+  the raised threshold, with its 95 % record-bootstrap CI (10 000 resamples, seed
+  20260929). *Gate wins* if r >= 20 %, the CI lower bound > 0 and Gcs keeps >= 80 %
+  of windows in every noise type; *threshold wins* if the CI upper bound < 0;
+  otherwise *inconclusive*. Reported but not deciding: the same without clean-error
+  records (clean copy > 60 false V/h under Robust), Gcs vs Gc, per noise type,
+  with record 202, and retention targets 0.8 and 0.95.
+- **C core check before the freeze**: the classifier band-pass only; C matches
+  Python bit-for-bit on 10 s of record 119 when built without fused multiply-add
+  (`-ffp-contract=off`, set in `c/CMakeLists.txt`). The rest of the chain is ported
+  after the freeze.
+
 # Pilot results worth reporting (DS1-cal, retention 0.9 x Robust default)
 
 `python scripts/run_pilot.py`; full output in `results/pilot/summary.json`,

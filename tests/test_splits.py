@@ -24,3 +24,10 @@ def test_ds2_access_is_guarded():
         mitdb.load_record(100)
     with pytest.raises(mitdb.TestSetAccessError):
         mitdb.load_record(202)
+
+
+def test_pipeline_refuses_ds2_copies_without_the_flag():
+    from vgate.pipeline import Copy, process
+
+    with pytest.raises(mitdb.TestSetAccessError):
+        process(Copy(100, "test", "none"))

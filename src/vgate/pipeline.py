@@ -34,7 +34,7 @@ CACHE_VERSION = 2  # bump when processing changes
 @dataclass(frozen=True)
 class Copy:
     record: int
-    split: str  # train | cal
+    split: str  # train | cal | test
     noise_type: str  # none | em | ma | bw
     offset: int = -1  # schedule cycle offset; -1 for the clean copy
 
@@ -59,6 +59,17 @@ def ds1_copies() -> list[Copy]:
     return out
 
 
+def ds2_copies(include_202: bool = False) -> list[Copy]:
+    """DS2 records clean plus one copy per noise type and cycle offset (test blocks)."""
+    types = config.splits()["noise"]["types"]
+    offsets = config.pipeline()["noise_schedule"]["cycle_offsets"]
+    out = []
+    for r in mitdb.ds2(include_202):
+        out.append(Copy(r, "test", "none"))
+        out += [Copy(r, "test", t, o) for t in types for o in offsets]
+    return out
+
+
 def _noisy_signal(c: Copy, rec: mitdb.Record) -> tuple[np.ndarray, list[dict]]:
     if c.noise_type == "none":
         return rec.signal, []
@@ -73,13 +84,17 @@ def _noisy_signal(c: Copy, rec: mitdb.Record) -> tuple[np.ndarray, list[dict]]:
     return mixer.mix(rec.signal, nstdb.load_noise(c.noise_type), sched, s_power, rec.fs), sched
 
 
-def process(c: Copy, cache: bool = True) -> dict[str, np.ndarray]:
-    path = CACHE_DIR / f"v{CACHE_VERSION}" / f"{c.name}.npz"
+def process(c: Copy, cache: bool = True, allow_test: bool = False) -> dict[str, np.ndarray]:
+    """allow_test: passed to the DS2 guard; only the frozen DS2 run sets it."""
+    if c.split == "test" and not allow_test:  # also guards the cache
+        raise mitdb.TestSetAccessError(f"{c.name} is a DS2 copy; only the frozen run may load it")
+    sub = "ds2" if c.split == "test" else ""
+    path = CACHE_DIR / f"v{CACHE_VERSION}" / sub / f"{c.name}.npz"
     if cache and path.exists():
         with np.load(path, allow_pickle=False) as z:
             return dict(z)
 
-    rec = mitdb.load_record(c.record)
+    rec = mitdb.load_record(c.record, allow_test=allow_test)
     fs = rec.fs
     raw, sched = _noisy_signal(c, rec)
     det, widths = pan_tompkins.detect_with_widths(raw, fs)

@@ -64,6 +64,17 @@ build, save and load. Change the schema there, in one place, and tell the team.
 - **Freeze = git tag.** Before running DS2, tag the commit (e.g. `freeze-v1`)
   with code, configs, weights and thresholds; run DS2 from that tag only.
 
+## Freeze and the DS2 run
+
+1. Pre-freeze checks: `pytest`, `scripts/check_splits.py`, `scripts/check_detector.py`,
+   `scripts/check_base.py`, the C tests (`ctest --test-dir c/build`), and
+   `python scripts/run_ds2.py --dry-run` (whole DS2 path with DS1-cal standing in).
+2. Commit, then `git tag -a freeze-v1 -m "..."`.
+3. `git checkout freeze-v1 && python scripts/run_ds2.py`. It refuses to run off a
+   clean `freeze-*` tag and refuses a second run; the verdict lands in
+   `results/ds2/<tag>/verdict.md`. Protocol and claim rule:
+   `scripts/run_ds2.py` docstring and `docs/report_section3_additions.md`.
+
 ## C core
 
 Needs CMake and a C compiler (e.g. MSVC Build Tools, or MinGW via MSYS2):
@@ -73,3 +84,6 @@ cmake -S c -B c/build
 cmake --build c/build
 ctest --test-dir c/build
 ```
+
+`python scripts/export_c_vectors.py` regenerates the Python reference vectors the C
+tests compare against.

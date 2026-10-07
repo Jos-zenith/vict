@@ -34,6 +34,8 @@ from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 
 from vgate import config
+from vgate.evaluation.operating import arm_rows as _arm_rows
+from vgate.evaluation.operating import operating_point, retention
 from vgate.evaluation.stats import bootstrap_ci
 from vgate.models.classifiers import make_svm, select_C
 from vgate.models.gates import make_gate
@@ -88,52 +90,8 @@ def tables(model, copies: list[Copy], data: dict[Copy, dict]) -> WindowTable:
     return WindowTable.concat(out)
 
 
-# --- operating points -----------------------------------------------------------
-def retention(t: WindowTable, k: int) -> float:
-    return float((t.n_true_v - t.lost_v[:, k]).sum() / max(t.n_true_v.sum(), 1))
-
-
-def operating_point(
-    t: WindowTable, risk: np.ndarray | None, target: float, ks: np.ndarray, cap: float
-) -> tuple[int, float]:
-    """(SVM threshold index, gate cut-off) with the fewest false V at retention >= target.
-
-    Windows with risk >= cut-off are deferred (no V calls). risk None: no gate.
-    Searches every threshold in ``ks``; for each, defers the riskiest windows first,
-    as many as retention allows but at most 1 - cap of the windows.
-    """
-    total = max(t.n_true_v.sum(), 1)
-    called = (t.n_true_v[:, None] - t.lost_v)[:, ks]
-    fv = t.false_v[:, ks]
-    if risk is None:
-        ok = called.sum(0) / total >= target
-        fv_k = np.where(ok, fv.sum(0), np.inf)
-        j = int(np.argmin(fv_k)) if ok.any() else int(np.argmin(np.abs(ks - t.default_index)))
-        return int(ks[j]), np.inf
-    order = np.argsort(-risk, kind="stable")
-    zero = np.zeros((1, len(ks)))
-    ret = (called.sum(0) - np.vstack([zero, np.cumsum(called[order], 0)])) / total
-    fv_left = fv.sum(0) - np.vstack([zero, np.cumsum(fv[order], 0)])
-    m = (ret >= target).sum(0) - 1  # deferrals allowed; -1 if even none reach target
-    m = np.minimum(m, int(round((1 - cap) * len(risk), 9)))
-    best = np.where(m >= 0, fv_left[np.maximum(m, 0), np.arange(len(ks))], np.inf)
-    if not np.isfinite(best).any():
-        return t.default_index, np.inf
-    j = int(np.argmin(best))
-    cut = float(risk[order[m[j] - 1]]) if m[j] > 0 else np.inf
-    return int(ks[j]), cut
-
-
 def arm_rows(t: WindowTable, k: int, keep: np.ndarray) -> dict:
-    """Per-record counts, so any record subset can be re-aggregated."""
-    recs = np.unique(t.record)
-    called = (t.n_true_v - t.lost_v[:, k]) * keep
-    per = {
-        "false_v": t.false_v[:, k] * keep, "called_v": called, "true_v": t.n_true_v,
-        "kept": keep.astype(int), "windows": np.ones(len(t), int),
-    }  # fmt: skip
-    out = {name: [int(v[t.record == r].sum()) for r in recs] for name, v in per.items()}
-    return {"records": recs.tolist(), **out, "thr": float(t.thresholds[k])}
+    return _arm_rows(t, k, keep, WIN_H)
 
 
 def fold(h: str, data: dict[Copy, dict], C: float, base, targets: list[float]) -> dict:

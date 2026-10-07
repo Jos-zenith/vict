@@ -26,3 +26,4 @@ types = ["em", "ma", "bw"]
 block_s = 120
 train_blocks = [1, 2, 3, 4]
 cal_blocks   = [5, 6, 7]
+test_blocks  = [9, 10, 11, 12, 13, 14, 15]  # DS2 only: the blocks wholly in the second half
