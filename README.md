@@ -13,7 +13,15 @@ pip install -e ".[dev]"
 python scripts/download_data.py     # MIT-BIH + NSTDB into data/raw (~100 MB)
 pytest                              # data tests run once data/raw exists
 python scripts/check_splits.py      # DS1 V-beat counts vs configs/splits.toml
+python scripts/check_detector.py    # Pan-Tompkins Se / PPV on clean DS1 (target >= 0.99)
+python scripts/check_base.py        # Base V sensitivity, grouped CV on DS1-train (>= 70 %)
+python scripts/run_pilot.py --record 114   # whole chain, one DS1-cal record
+python scripts/run_pilot.py         # DS1 pilot: Robust, gates, matched retention, bootstrap
 ```
+
+`run_pilot.py` caches each processed record copy under `results/cache/`; bump
+`CACHE_VERSION` in `src/vgate/pipeline.py` after changing anything upstream of the
+classifier.
 
 macOS / Linux: `source .venv/bin/activate` instead of the Activate line.
 
@@ -29,6 +37,7 @@ macOS / Linux: `source .venv/bin/activate` instead of the Activate line.
 | `src/vgate/sqi.py` | qSQI, pSQI, kSQI, basSQI | Shapari |
 | `src/vgate/features.py` | Per-beat features | Chandru |
 | `src/vgate/models/` | Base/Robust SVM, Gc/Gcs gates | Chandru |
+| `src/vgate/pipeline.py` | One record copy: mix, detect, features, labels, window SQIs (cached) | all |
 | `src/vgate/windows.py` | Per-window table: the contract between classifier and evaluation | all |
 | `src/vgate/evaluation/` | Beat matching, bootstrap CIs | Chandru |
 | `c/` | Portable C core (post-freeze port), CMake + tests | Zenith |
