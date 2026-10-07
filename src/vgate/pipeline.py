@@ -168,3 +168,16 @@ def to_windows(
         ref_aami=data["ref_aami"],
         clean=clean,
     )
+
+
+def window_tables(model, copies: list[Copy], data: dict[Copy, dict]) -> windows.WindowTable:
+    """Window rows for ``copies`` scored by ``model``; each record's clean copy (which
+    must be among them) labels its noisy copies' risky windows."""
+    out = []
+    for r in sorted({c.record for c in copies}):
+        mine = [c for c in copies if c.record == r]
+        cc = next(c for c in mine if c.copy == "clean")
+        dec = {c: model.decision_function(data[c]["features"]) for c in mine}
+        clean = to_windows(cc, data[cc], dec[cc])
+        out += [clean] + [to_windows(c, data[c], dec[c], clean) for c in mine if c.copy == "noisy"]
+    return windows.WindowTable.concat(out)

@@ -19,7 +19,7 @@ from vgate.evaluation.operating import defer_cutoff, highest_threshold, retentio
 from vgate.evaluation.stats import bootstrap_ci
 from vgate.models.classifiers import make_svm, select_C
 from vgate.models.gates import make_gate
-from vgate.pipeline import Copy, ds1_copies, process, to_windows, training_data
+from vgate.pipeline import Copy, ds1_copies, process, training_data, window_tables
 from vgate.windows import WindowTable
 
 OUT = config.ROOT / "docs" / "calibration_results.md"
@@ -32,17 +32,6 @@ METHODS = {  # name: (rho on the calibration set, coverage cap per noise type, P
 }
 ARMS = ("threshold", "Gc", "Gcs")
 FIELDS = ("false_v", "called_v", "true_v", "kept", "windows")
-
-
-def window_tables(model, copies: list[Copy], data: dict) -> WindowTable:
-    out = []
-    for r in sorted({c.record for c in copies}):
-        mine = [c for c in copies if c.record == r]
-        cc = next(c for c in mine if c.copy == "clean")
-        dec = {c: model.decision_function(data[c]["features"]) for c in mine}
-        clean = to_windows(cc, data[cc], dec[cc])
-        out += [clean] + [to_windows(c, data[c], dec[c], clean) for c in mine if c.copy == "noisy"]
-    return WindowTable.concat(out)
 
 
 def _xy(copies: list[Copy], data: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
