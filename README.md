@@ -6,8 +6,9 @@ pre-registered study. **It is not a medical device.**
 
 **Status:** v1.0 is frozen as the threshold-only design (tag `v1.0-threshold`).
 It has been validated offline on MIT-BIH only. Phase 2 (external datasets and real
-strap noise) is pre-registered and has not been run yet. The C core and firmware are
-partly built.
+strap noise) is pre-registered and has not been run yet. The full v1.0 chain is
+ported to C and matches Python on every DS1 record. The ESP32 replay firmware is
+written but has not been run on the board yet.
 
 ---
 
@@ -78,15 +79,23 @@ be shown to a reviewer, but never used as a decision.
 
 | Component | State |
 |---|---|
-| Pan-Tompkins (Python) | Works sample by sample, ready to port |
-| C core (`c/`) | Only the biquad band-pass exists. It is bit-identical to Python on MIT-BIH 119 and on synthetic test vectors |
-| Detector, features and SVM in C | Not started |
-| ESP32-S3 firmware (`firmware/`) | Planned only. The plan is an ESP-IDF project with the C core as a component, reading the AD8232 through an ADS1115 every 2.78 ms (360 Hz) |
-| Acceptance targets | Firmware output matches Python within 1e-4, and each window takes under 2.5 s |
+| C core (`c/`) | Complete and streaming: band-pass → Pan-Tompkins → features → SVM → 10 s window state. Fixed-size state (about 160 KB) and no dynamic allocation. All constants are generated from the frozen config and weights (`scripts/export_c_params.py`) |
+| C vs Python, whole records | `scripts/check_c_core.py` covered all 22 DS1 records, clean and with em/ma/bw at 3 offsets each: 220 copies and 536,821 beats. R peaks, QRS widths, V calls and window states are identical. All 14 features are bit-identical for every beat. Decision values differ by at most 5e-15 |
+| C vs Python, CI | `c/tests/test_pipeline.c` uses golden vectors from 60 s of record 119 (clean) and 60 s of record 208 (em noise, 6 dB), plus a flat line |
+| ESP32-S3 firmware (`firmware/`) | Replay firmware is written: MIT-BIH over native USB, same output lines as the laptop tool, checked by `check_c_core.py --serial`. **It has not been built or run on the board yet.** Live AD8232/ADS1115 input comes after that |
+| Acceptance targets | Firmware output matches Python (identical R peaks, V calls and windows; features and decisions within 1e-12), and each window takes under 2.5 s |
+
+The detector's integrator is a FIR filter that SciPy runs through BLAS, so it can
+only match to about one ulp. The detector is therefore held to identical discrete
+outputs (R peaks and widths). Everything after it is bit-identical except `log()`.
 
 **Built-in latency:** a beat can be classified only after the next R peak (for RR
-after) and about 450 ms of signal after it (for the wavelet span). A window is
-therefore decided about one beat after it ends, with a 2 s timeout.
+after) and about 450 ms of signal after it (for the wavelet span). The C pipeline
+classifies a beat once the detector can no longer emit an R peak before its
+successor. If that hasn't happened, it classifies the beat 4 s after its R peak
+(2 s RR cap plus the 2 s decision timeout). A window is decided the same way after
+its end. The median beat latency is about 1.1 s on record 119, and the maximum over all DS1
+copies is 2.7 s.
 
 ## Limitations
 

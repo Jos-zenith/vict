@@ -19,6 +19,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.5"]
+board = ["pyserial>=3.5"]  # scripts/check_c_core.py --serial (ESP32 replay)
 
 [tool.setuptools.packages.find]
 where = ["src"]
